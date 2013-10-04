@@ -12,7 +12,7 @@ class ldapProfileMapping extends profileMapping
   public $baseDN = "";
   public $query = "";
 
-  function __construct(string $wpField, string $attribute, string $baseDN = "", string $query = "")
+  function __construct($wpField, $attribute, $baseDN = "", $query = "")
   {
     $this->wpField = $wpField;
     $this->attribute = $attribute;

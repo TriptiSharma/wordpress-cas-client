@@ -49,6 +49,7 @@ class ldapUser
     }
     debug_log("(ldapUser->GetData()) uid => '".$this->data[0]['uid'][0]."', employeeid => '".$this->data[0]['employeeid'][0]."'");
 
+    // TODO: Required fields should be configurable
     if (isset($this->data[0]['uid'][0]) || isset($this->data[0]['employeeid'][0])) // updating the if to have employeeid check also
     {
       $usernicename = sanitize_title_with_dashes($this->data[0]['samaccountname'][0]);

@@ -15,11 +15,12 @@ class casManager
   private $cas_configured = true;
   private $ldapManager;
   private $options;
+  private $userAttributeMap;
 
   function __construct($options, $ldapManager = null)
   {
     debug_log("(casManager) Initializing casManager (constructor)");
-    debug_log("(casManager) options: ".print_r($options, true));
+//    debug_log("(casManager) options: ".print_r($options, true));
 
     if (!empty($options["include_path"]) && file_exists($options["include_path"]))
     {
@@ -30,6 +31,9 @@ class casManager
     $this->options = $options;
     $this->ConfigureCasClient($options);
 
+    // TODO: Move GetMappings() to a settings class that deals with all config/options/settings
+    $field_mappings = $this->GetMappings("LDAP", $options);
+
     if(isset($ldapManager) && $ldapManager != null)
     {
       debug_log("(casManager) ldapManager was passed in, using that.");
@@ -39,7 +43,7 @@ class casManager
     {
       debug_log("(casManager) no ldapManager provided. Instantiating a new one.");
 //      debug_log("options: " . print_r($options, true));
-      $this->ldapManager = new ldapManager($options['ldapuser'], $options['ldappassword'], $options['ldapuri']);
+      $this->ldapManager = new ldapManager($options['ldapuser'], $options['ldappassword'], $field_mappings, $options['ldapuri']);
     }
     debug_log("(casManager) ldapManager created: ldapManager->Uri == '".$this->ldapManager->Uri."'");
   }
@@ -247,5 +251,54 @@ class casManager
       unset($phpCas);
       // if you want to set a cert, replace the above few lines
     }
+  }
+
+  /**
+   * Constructs a collection of mapping classes for the $service specified.
+   *
+   * @param $service
+   * @param $options
+   *
+   * @return array  Collection of mapping classes.
+   */
+  private function GetMappings($service, $options)
+  {
+    if(!isset($this->userAttributeMap))
+    {
+      if(!isset($options['user_attribute_map']) || empty($options['user_attribute_map']))
+      {
+        $error = "No user attributes were found in config options";
+        error_log($error);
+        debug_log("(casManager->GetMappings()) $error. Aborting.");
+        return array();
+      }
+      $this->userAttributeMap = json_decode($options['user_attribute_map']);
+      debug_log("(casManager->GetMappings()) Retrieved JSON settings: '".print_r($this->userAttributeMap, true)."'");
+    }
+
+    // TODO: Add support for other types of services (i.e. CAS)
+    if(strtoupper($service) == "LDAP") {
+      $mapfunc = function($jv) { if($jv[0] === "LDAP") return $jv[1];};
+    } else {
+      $warn = "WARNING: Unsupported mapping service defined: '$service'. ALL mappings will be used.";
+      error_log($warn);
+      debug_log("(casManager->GetMappings()) ".$warn);
+
+      $mapfunc = function($jv) {return $jv[1];};
+    }
+
+    $mappings = array_filter(array_map($mapfunc, array_values($this->userAttributeMap)), function($v) { return isset($v);});
+    debug_log("(casManager->GetMappings()) Only [$service] mappings: '".print_r($mappings, true)."'");
+
+    $idx = 0;
+    $serviceMappings = array();
+    foreach($mappings as $properties)
+    {
+      debug_log("(casManager->GetMappings()) new ldapProfileMapping(".$properties["wpField"].", ".$properties["attribute"].")");
+      $serviceMappings[$idx] = new ldapProfileMapping($properties["wpField"], $properties["attribute"]);
+      $idx++;
+    }
+
+    return $serviceMappings;
   }
 }

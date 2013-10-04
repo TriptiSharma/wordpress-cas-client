@@ -353,6 +353,7 @@ $ldapPassword = $ldapPassword ? $ldapPassword : ""; // if the  decrypt function 
 			'ldap_user_value_to_compare' => $get_options_func('wpcasldap_ldap_user_value_to_compare'),
 			'ldap_wp_role' => $get_options_func('wpcasldap_ldap_wp_role'),
 			'ldap__wp_site' => $get_options_func('wpcasldap_ldap_wp_site'),
+      'user_attribute_map' => $get_options_func('wpcasldap_user_attribute_map')
 		);
 
 	if (is_array($wpcasldap_options) && count($wpcasldap_options) > 0)

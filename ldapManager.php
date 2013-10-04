@@ -64,50 +64,53 @@ class ldapManager
 
   public $ProfileMappings = array();
 
+  public $Query = "";
+
   /**
    * @param        $login
    * @param        $password
+   * @param array  $mappings
    * @param string $uri
+   * @param string $query
    */
-  function __construct($login, $password, $uri= "")
+  function __construct($login, $password, array $mappings = null, $uri= "", $query = "")
   {
-    debug_log("Initializing ldapManager (constructor) [login => '$login', password => '$password', uri => '$uri' ]");
+    debug_log("Initializing ldapManager (constructor) [login => '$login', password => '$password', uri => '$uri', query => '$query', mappings => ".print_r($mappings,true)." ]");
 
     $this->Username = $login;
     $this->password = $password;
 
     if($uri != "") {
-      debug_log("(ldapManager) Setting Uri = '$uri''");
+//      debug_log("(ldapManager) Setting Uri = '$uri''");
       $this->Uri = $uri;
-      debug_log("(ldapManager) this->Uri == '$this->Uri'");
+//      debug_log("(ldapManager) this->Uri == '$this->Uri'");
+    }
+    if($query != "") {
+      $this->Query = $query;
+    }
+    else
+    {
+      $this->Query = "sAMAccountName={id}";
     }
 
-
-// TEMP:
-
-// This array was lifted from ldapUser::GetUser()
-
-//    'user_login' => $this->data[0]['samaccountname'][0],
-//        'user_password' => substr( md5( uniqid( microtime( ))), 0, 8 ),
-//        'user_email' => $this->data[0]['mail'][0],
-//        'first_name' => $this->data[0]['givenname'][0],
-//        'last_name' => $this->data[0]['sn'][0],
-//        'role' => $userrole,
-//        'nickname' => $this->data[0]['cn'][0],
-//        'user_nicename' => $usernicename
-
-// The following array cam from the old Search() code.
-// NOTE: the absence in the list above of some of the attributes we've been pulling
-
-// array('uid','mail','givenname','sn','rolename','cn','EmployeeID','sAMAccountName')
-    $this->ProfileMappings = array(
-                                    new ldapProfileMapping("user_login", "sAMAccountName"),
-                                    new ldapProfileMapping("user_email", "mail"),
-                                    new ldapProfileMapping("first_name", "givenname"),
-                                    new ldapProfileMapping("last_name", "sn"),
-                                    new ldapProfileMapping("nickname", "cn")
-                                  );
-// END TEMP
+    if(!isset($mappings))
+    {
+      // set default mappings
+      $this->ProfileMappings = array(
+        new ldapProfileMapping("user_login", "sAMAccountName"),
+        new ldapProfileMapping("user_email", "mail"),
+        new ldapProfileMapping("first_name", "givenname"),
+        new ldapProfileMapping("last_name", "sn"),
+        new ldapProfileMapping("nickname", "cn"),
+        new ldapProfileMapping(null, "uid"),
+        new ldapProfileMapping(null, "EmployeeID"),
+      );
+    }
+    else
+    {
+      $this->ProfileMappings = $mappings;
+    }
+    debug_log("ProfileMappings: ".print_r($this->ProfileMappings, true));
   }
 
   /**
@@ -219,14 +222,18 @@ class ldapManager
    * Performs an LDAP query.
    *
    * @param $base_dn
-   * @param $filter
-   *
-   * @internal param $attribute_array
+   * @param $query
    *
    * @return null|resource
    */
-  public function Search($base_dn, $filter)
+  public function Search($base_dn, $query)
   {
+    if(!isset($base_dn) || !isset($query))
+    {
+      debug_log("(ldapManager->Search()) Must provide a Base DN ($base_dn) and query ($query) to Search.");
+      error_log("Unable to search LDAP without both a Base DN and query.");
+      return null;
+    }
     // TODO: Merge GetSearchResults() with Search(), so that one call returns ldap entries.
     if(!$this->HaveConnection("ldapManager->Search()", $this->connection))
     {
@@ -235,11 +242,13 @@ class ldapManager
 
     // extract an array of just the attribute values we'll need from LDAP
     $attributes = array_map(create_function('$v', 'return $v->attribute;'), array_values($this->ProfileMappings));
+    debug_log("(ldapManager->Search()) Attributes to retrieve from LDAP ".array_info($attributes));
 
     // TODO: do we need additional attributes for internal logic? (see the constructor)
+    // e.g. 'EmployeeID', 'rolename'?
 
-    // TODO: is $filter the Query?
-    return ldap_search($this->connection, $base_dn, $filter, $attributes);
+     // TODO: is $filter the Query?
+    return ldap_search($this->connection, $base_dn, $query, $attributes);
   }
 
   /**
@@ -256,7 +265,9 @@ class ldapManager
     {
       return ldap_get_entries($this->connection, $search_results);
     }
-    error_log("Unable to retrieve LDAP search results until a connection has been established.");
+    $error = "Unable to retrieve LDAP search results until a connection has been established.";
+    error_log($error);
+    debug_log("(ldapManager->GetSearchResults()) ".$error);
     return null;
   }
 
@@ -295,8 +306,6 @@ class ldapManager
    */
   function GetUser($uid, $baseDN)
   {
-//    if(!$this->HaveUri()) { return null; }
-
     try
     {
       $ds = $this->Connect();
@@ -414,8 +423,10 @@ class ldapManager
             }
 
             */
-            debug_log("(ldapManager->GetUser()) Searching for user ID '$uid'");
-            $search = $this->Search($baseDN, "sAMAccountName=$uid");
+            $query = str_replace("{id}", $uid, $this->Query);
+
+            debug_log("(ldapManager->GetUser()) Searching for user ID '$uid' (LDAP query: '$query')");
+            $search = $this->Search($baseDN, $query);
             if (isset($search) && !empty($search))
             {
               $info = $this->GetSearchResults($search);
@@ -434,9 +445,9 @@ class ldapManager
     {
       $err_msg = "An LDAP error occurred while talking to '" . $this->Uri . "': " . $e->getMessage();
       error_log($err_msg);
-      debug_log($err_msg);
+      debug_log("(ldapManager->GetUser()) ".$err_msg);
     }
-    return FALSE;
+    return false;
   }
 
   // Private methods

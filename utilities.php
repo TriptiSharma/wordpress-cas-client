@@ -9,7 +9,8 @@
 
 // Disable to turn off debug logging
 define("ENABLE_DEBUG_LOG", true);
-define("DEBUG_LOG_PATH", "/var/tmp/wordpress-cas-client-debug.log");
+define("DEBUG_LOG_PATH", "/var/tmp");
+define ("DEBUG_LOG_FILE", "wordpress-cas-client-debug.log");
 
 /**
  * @param $haystack
@@ -32,7 +33,7 @@ function debug_log($message)
   if (ENABLE_DEBUG_LOG)
   {
     $date = new DateTime();
-    if (!error_log(site_name().": [".$date->format('Y-m-d H:i:s')."] ".$message . "\n", 3, DEBUG_LOG_PATH))
+    if (!error_log("[".$date->format('Y-m-d H:i:s')."] ".$message . "\n", 3, DEBUG_LOG_PATH."/".site_name().DEBUG_LOG_FILE))
     {
       error_log("UNABLE TO WRITE TO DEBUG LOG (" . DEBUG_LOG_PATH . "): '" . $message . "'");
     }
@@ -63,10 +64,20 @@ function class_autoloader($class)
   }
   else
   {
-    $error = "Failed to load '".$classFile."'";
+    $error = "Failed to load '".$classFile."' (because it does not exist).";
     debug_log($error);
-    error_log($error);
   }
+}
+
+/**
+ * Returns a string representing information about the contents of the array.
+ * @param $array
+ *
+ * @return string Count of the values, and contents of the array
+ */
+function array_info($array)
+{
+  return "(".array_count_values($array).": ".print_r($array, true);
 }
 
 ?>
