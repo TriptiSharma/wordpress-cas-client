@@ -62,6 +62,8 @@ class ldapManager
    */
   public $Username;
 
+  public $ProfileMappings = array();
+
   /**
    * @param        $login
    * @param        $password
@@ -79,6 +81,33 @@ class ldapManager
       $this->Uri = $uri;
       debug_log("(ldapManager) this->Uri == '$this->Uri'");
     }
+
+
+// TEMP:
+
+// This array was lifted from ldapUser::GetUser()
+
+//    'user_login' => $this->data[0]['samaccountname'][0],
+//        'user_password' => substr( md5( uniqid( microtime( ))), 0, 8 ),
+//        'user_email' => $this->data[0]['mail'][0],
+//        'first_name' => $this->data[0]['givenname'][0],
+//        'last_name' => $this->data[0]['sn'][0],
+//        'role' => $userrole,
+//        'nickname' => $this->data[0]['cn'][0],
+//        'user_nicename' => $usernicename
+
+// The following array cam from the old Search() code.
+// NOTE: the absence in the list above of some of the attributes we've been pulling
+
+// array('uid','mail','givenname','sn','rolename','cn','EmployeeID','sAMAccountName')
+    $this->ProfileMappings = array(
+                                    new ldapProfileMapping("user_login", "sAMAccountName"),
+                                    new ldapProfileMapping("user_email", "mail"),
+                                    new ldapProfileMapping("first_name", "givenname"),
+                                    new ldapProfileMapping("last_name", "sn"),
+                                    new ldapProfileMapping("nickname", "cn")
+                                  );
+// END TEMP
   }
 
   /**
@@ -191,18 +220,26 @@ class ldapManager
    *
    * @param $base_dn
    * @param $filter
-   * @param $attribute_array
+   *
+   * @internal param $attribute_array
    *
    * @return null|resource
    */
-  public function Search($base_dn, $filter, $attribute_array)
+  public function Search($base_dn, $filter)
   {
-    if (isset($this->connection))
+    // TODO: Merge GetSearchResults() with Search(), so that one call returns ldap entries.
+    if(!$this->HaveConnection("ldapManager->Search()", $this->connection))
     {
-      return ldap_search($this->connection, $base_dn, $filter, $attribute_array);
+      return null;
     }
-    error_log("Unable to search LDAP until a connection has been established.");
-    return null;
+
+    // extract an array of just the attribute values we'll need from LDAP
+    $attributes = array_map(create_function('$v', 'return $v->attribute;'), array_values($this->ProfileMappings));
+
+    // TODO: do we need additional attributes for internal logic? (see the constructor)
+
+    // TODO: is $filter the Query?
+    return ldap_search($this->connection, $base_dn, $filter, $attributes);
   }
 
   /**
@@ -214,6 +251,7 @@ class ldapManager
    */
   public function GetSearchResults($search_results)
   {
+    // TODO: Merge GetSearchResults() with Search(), so that one call returns ldap entries.
     if (isset($this->connection))
     {
       return ldap_get_entries($this->connection, $search_results);
@@ -377,7 +415,7 @@ class ldapManager
 
             */
             debug_log("(ldapManager->GetUser()) Searching for user ID '$uid'");
-            $search = $this->Search($baseDN, "sAMAccountName=$uid", array('uid','mail','givenname','sn','rolename','cn','EmployeeID','sAMAccountName'));
+            $search = $this->Search($baseDN, "sAMAccountName=$uid");
             if (isset($search) && !empty($search))
             {
               $info = $this->GetSearchResults($search);
@@ -468,5 +506,30 @@ class ldapManager
         debug_log($error);
       }
     }
+  }
+
+  private function HaveConnection($source, &$connection)
+  {
+    if (isset($connection))
+    {
+      return true;
+    }
+    else
+    {
+      debug_log("($source) Don't have an active connection, attempting to connect");
+      $connection = $this->Connect();
+
+      if (isset($connection))
+      {
+        return true;
+      }
+      else
+      {
+        $error = "Unable to search LDAP until a connection has been established.";
+        error_log($error);
+        debug_log("($source) $error");
+      }
+    }
+    return false;
   }
 }

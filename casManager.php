@@ -75,6 +75,7 @@ class casManager
 
             unset($userdata['role']);//Remove role from userdata
 
+            // See http://codex.wordpress.org/Function_Reference/wp_insert_user for a list of valid $userdata fields
             $userID = wp_update_user( $userdata );
 
             if ( is_wp_error( $userID ) ) {

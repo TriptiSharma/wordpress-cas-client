@@ -13,11 +13,17 @@ class ldapUser
 {
   private $data = NULL;
 
+  /**
+   * @param $member_array
+   */
   function __construct($member_array)
   {
     $this->data = $member_array;
   }
 
+  /**
+   * @return bool
+   */
   function GetName()
   {
     if(isset($this->data[0]['cn'][0]))
@@ -26,6 +32,14 @@ class ldapUser
       return FALSE;
   }
 
+  /**
+   *
+   *
+   * References:
+   *  * http://codex.wordpress.org/Function_Reference/wp_insert_user for a list of valid WP fields.
+   *
+   * @return array|bool
+   */
   function GetData()
   {
     if(empty($this->data))
