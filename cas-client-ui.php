@@ -1,5 +1,7 @@
-<?php 
-######## 
+<?php
+include_once(dirname(__FILE__)."/utilities.php");
+include_once(dirname(__FILE__)."/admin-attribute-mapping.php");
+########
 // New
 ########
 
@@ -349,19 +351,16 @@
 	            
 				<?php } elseif  ($active_tab == 'user_mapping' ) { ?>
 					<h4>User Mapping Rules</h4>
-				<table class="form-table">
-					<tr valign="top">
-						<th scope="row">
-							<label></label>
-						</th>
-					</tr>
-				</table>
+          <?php
+          $elment_html = AttributeMappingHtml();
+          echo $elment_html;
+          ?>
 
 				<?php				
 				###############################
 				// Add User Mapping Rule Modal
 				###############################
-				
+
 				 add_thickbox(); ?>
 				<div id="my-content-id" style="display:none;">
 				     <p>

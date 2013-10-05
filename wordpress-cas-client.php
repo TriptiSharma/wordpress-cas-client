@@ -50,6 +50,7 @@ spl_autoload_register('class_autoloader');
 // Must explicitly include class file when referencing static members
 include_once(dirname(__FILE__)."/ldapManager.php");
 include_once(dirname(__FILE__)."/casManager.php");
+
 // This global variable is set to either 'get_option' or 'get_site_option' depending on multisite option value
 global $get_options_func ;
 //This global variable is defaulted to 'options.php' , but for network setting we want the form to submit to itself, so we will leave it empty

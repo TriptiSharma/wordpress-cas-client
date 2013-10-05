@@ -263,6 +263,7 @@ class casManager
    */
   private function GetMappings($service, $options)
   {
+    // TODO: Move retrieval of settings into a common Settings class
     if(!isset($this->userAttributeMap))
     {
       if(!isset($options['user_attribute_map']) || empty($options['user_attribute_map']))
@@ -272,6 +273,8 @@ class casManager
         debug_log("(casManager->GetMappings()) $error. Aborting.");
         return array();
       }
+      // All the mappings defined are stored as a multi-dimensional JSON array in Wordpress' config table.
+      // For some rough examples, see http://shoes.bellevuecollege.edu/shawn/test.php
       $this->userAttributeMap = json_decode($options['user_attribute_map']);
       debug_log("(casManager->GetMappings()) Retrieved JSON settings: '".print_r($this->userAttributeMap, true)."'");
     }

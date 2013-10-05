@@ -57,14 +57,20 @@ function site_name()
 function class_autoloader($class)
 {
   $classFile = dirname(__FILE__) . "/" . $class . ".php";
+  safe_include_once($classFile);
+}
 
-  if (file_exists($classFile))
+function safe_include_once($file)
+{
+  debug_log("Including file: '$file'");
+  if (file_exists($file))
   {
-    include_once($classFile);
+    /** @noinspection PhpIncludeInspection */
+    include_once($file);
   }
   else
   {
-    $error = "Failed to load '".$classFile."' (because it does not exist).";
+    $error = "Failed to load '".$file."' (because it does not exist).";
     debug_log($error);
   }
 }
