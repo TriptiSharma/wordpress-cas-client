@@ -1,3 +1,4 @@
+
 <?php
 include_once(dirname(__FILE__)."/utilities.php");
 include_once(dirname(__FILE__)."/admin-attribute-mapping.php");
@@ -5,30 +6,14 @@ include_once(dirname(__FILE__)."/admin-attribute-mapping.php");
 // New
 ########
 
+include_once( dirname(__FILE__)."/role-assignment-rules.php");
 
 
 
-##########################
-##########################
-##########################
-##########################
-##########################
-/*
-	add_action( 'network_admin_menu', 'casclient_network_menu_settings');
-	
-	function casclient_network_menu_settings(){
-
-		add_submenu_page ('settings.php', 'CAS Client Beta', 'CAS Client Beta', 'manage_network', 'casclient-settings', 'casclient_settings');
-
-	}
-
-	function casclient_settings($active_tab = '' ) { */
-		function wpcasldap_options_page($active_tab = '' ) {
-
-	   // if (is_multisite() && current_user_can('manage_network'))  {
+function wpcasldap_options_page($active_tab = '' ) {
 
 	        ?>
-	    <div class="wrap">
+	<div class="wrap">
 	<div id="icon-themes" class="icon32"></div>
 	<h2>CAS Client</h2>
 	<?php //settings_errors(); ?> 
@@ -76,8 +61,9 @@ include_once(dirname(__FILE__)."/admin-attribute-mapping.php");
 	
 	<form method="post" action="">
 		<input type="hidden" name="action" value="update_casclientbeta_settings" />
-
-		<?php 
+		<input type="hidden" name="directory_path" id="directory_path" value="<?php echo PLUGIN_DIR_PATH?>">
+		<input type="hidden" name="ajax_url" id="ajax_url" value="<?php echo admin_url('admin-ajax.php');?>">
+		<?php
 		wp_nonce_field('save_network_casclientbeta_settings', 'casclientbeta-plugin');
 
 	$optionarray_def = wpcasldap_getoptions();
@@ -363,9 +349,10 @@ include_once(dirname(__FILE__)."/admin-attribute-mapping.php");
 
 				 add_thickbox(); ?>
 				<div id="my-content-id" style="display:none;">
-				     <p>
-				          User Mapping Rules go here.
-				     </p>
+				     <?php
+				     $rulesOb = new roleAssignmentRules();
+				     $rulesOb -> htmlTemplate();
+				     ?>
 				</div>
 				
 				<a href="#TB_inline?width=600&height=550&inlineId=my-content-id" class="thickbox button-secondary">Add rule</a>
@@ -375,30 +362,52 @@ include_once(dirname(__FILE__)."/admin-attribute-mapping.php");
 
 
 				<?php } else { ?>
-					<h4>Role Assignment Rules</h4>
-				<table class="form-table">
-					<tr valign="top">
-						<th scope="row">
-							<label></label>
-						</th>
-					</tr>
-				</table>
-
-
-
+					
 				<?php				
 
 				###############################
 				// Add Role Assignment Rule Modal
 				###############################
-				
-				 add_thickbox(); ?>
-				<div id="add_role_assignments" style="display:none;">
-					
+				?>
+				<h3>Add Role Assignment Rule</h3>
+				<div id="add_role_assignments" style="margin:10px;">
+					<?php
+				     $rulesOb = new roleAssignmentRules();
+				     $ruleHtml =  $rulesOb->htmlTemplate();
+				     error_log("ruleHtml :".$ruleHtml);
+				     echo $ruleHtml;
+				     ?>
 				</div>
 				
-				<a href="#TB_inline?width=600&height=550&inlineId=add_role_assignments" class="thickbox button-secondary">Add rule</a>						
-	
+				<a href="#" style="margin:10px;">Add rule</a>	
+				<div id="rule_view">
+					<h3>List of All the rules</h3>
+					<ul>
+					<?php
+						//Get list of all rules (only thr unique names)
+						$allRuleNames = $rulesOb->getAllRuleNames();
+						if(is_array($allRuleNames))
+						{
+							foreach($allRuleNames as $name)
+							{
+								?>
+									<li>
+										
+											<div  class="role_rules" style="text-decoration:underline;margin:10px;"><?php echo $name ?></div>
+											<div  class="edit_rule" style="text-decoration:underline;margin:10px;">Edit</div>
+											<?php
+												$ename = str_replace(" ","_",$name)
+											?>
+											<div id="<?php echo $ename ?>"></div>
+										
+												
+									</li>
+								<?php
+							}
+						}
+					?>					
+					</ul>
+				</div>
 	</form>
 		
 	</div>

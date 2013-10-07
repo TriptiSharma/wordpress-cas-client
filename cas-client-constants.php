@@ -12,3 +12,4 @@ define("CAS_DEFAULT_PORT",'443');
 define("CAS_DEFAULT_PATH","/");
 define("SCHEME","https://");
 define("DEFAULT_CASFILE_PATH", dirname(__FILE__).'/CAS/CAS.php');
+define("PLUGIN_DIR_PATH",plugins_url(__DIR__));

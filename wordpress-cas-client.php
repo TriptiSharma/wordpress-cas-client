@@ -43,6 +43,7 @@ License: GPL2
 
 // include common functions, etc.
 
+
 include_once(dirname(__FILE__)."/cas-client-constants.php");
 include_once(dirname(__FILE__)."/utilities.php");
 // automatically include class files when encountered
@@ -51,10 +52,15 @@ spl_autoload_register('class_autoloader');
 include_once(dirname(__FILE__)."/ldapManager.php");
 include_once(dirname(__FILE__)."/casManager.php");
 
+
 // This global variable is set to either 'get_option' or 'get_site_option' depending on multisite option value
 global $get_options_func ;
 //This global variable is defaulted to 'options.php' , but for network setting we want the form to submit to itself, so we will leave it empty
 global $form_action;
+
+
+include_once( dirname(__FILE__)."/role-rules-post.php");
+
 
 if (file_exists( dirname(__FILE__).'/config.php' ) )
     /** @noinspection PhpIncludeInspection */
@@ -95,8 +101,14 @@ if($wpcasldap_options)
 $wpcasldap_use_options = wpcasldap_getoptions();
 debug_log("(wordpress-cas-client) options: ".print_r($wpcasldap_use_options,true));
 
+
 global $casManager;
 $casManager = new casManager($wpcasldap_use_options);
+
+//error_log("options :".print_r($wpcasldap_use_options,true));
+$cas_configured = true;
+
+
 
 // plugin hooks into authentication system
 add_action('wp_authenticate', 'cas_client_authenticate', 10, 2);
@@ -167,6 +179,57 @@ return sprintf('S-%d-%d-%s', $srl, $iav, implode('-',$sub_ids));
 
 
 
+
+
+
+class wpcasldapuser
+{
+	private $data = NULL;
+
+	function __construct($member_array) {
+		$this->data = $member_array;
+	}
+
+	function get_user_name() {
+		if(isset($this->data[0]['cn'][0]))
+			return $this->data[0]['cn'][0];
+		else
+			return FALSE;
+	}
+	
+	function get_user_data() {
+		global $wpcasldap_use_options;
+		if (isset($this->data[0]['uid'][0]) || isset($this->data[0]['employeeid'][0])) // updating the if to have employeeid check also
+		{
+			//error_log("potential bug uid :".$this->data[0]['uid'][0]);
+			$userrole = "";
+			$usernicename = sanitize_title_with_dashes($this->data[0]['samaccountname'][0]);
+			//error_log("user nice name ".$usernicename);
+			//echo "<br/> user login".$this->data[0]['samaccountname'][0];
+			if($this->data[0]['employeeid'][0] != null)
+			{
+				$userrole = $GLOBALS["defaultEmployeeUserrole"];
+			}
+			else
+			{
+				$userrole = $GLOBALS["defaultStudentUserrole"];
+			}
+			return array(
+				'user_login' => $this->data[0]['samaccountname'][0],
+				'user_password' => substr( md5( uniqid( microtime( ))), 0, 8 ), 
+				'user_email' => $this->data[0]['mail'][0],
+				'first_name' => $this->data[0]['givenname'][0],
+				'last_name' => $this->data[0]['sn'][0],
+				'role' => $userrole,
+				'nickname' => $this->data[0]['cn'][0],
+				'user_nicename' => $usernicename
+			);
+		}
+		else 
+			return false;
+	}
+	
+}
 
 
 
@@ -241,13 +304,13 @@ function wpcasldap_options_page_add() {
 
 	if (function_exists('add_management_page')) 
 	{
-		error_log("options general ----------------------------");
+		//error_log("options general ----------------------------");
 		add_submenu_page('options-general.php', 'CAS Client', 'CAS Client', CAPABILITY, 'casclient', 'wpcasldap_options_page');	
 	}
 		//add_submenu_page('options-general.php', 'wpCAS with LDAP', 'wpCAS with LDAP', CAPABILITY, 'wpcasldap', 'wpcasldap_options_page');		
 	else
 	{
-		error_log("CAS Client for single site ----------------------------");
+		//error_log("CAS Client for single site ----------------------------");
 		add_options_page( 'CAS Client','CAS Client',CAPABILITY, basename(__FILE__), 'wpcasldap_options_page');
 	}
 		//add_options_page( __( 'wpCAS with LDAP', 'wpcasldap' ), __( 'wpCAS with LDAP', 'wpcasldap' ),CAPABILITY, basename(__FILE__), 'wpcasldap_options_page');
@@ -262,7 +325,7 @@ function wpcasldap_getoptions() {
 	//Parse the url to retrieve server_name, server_port and path
 	$cas_server = $get_options_func('wpcasldap_casserver');
 	$componentsOfUrl = parse_cas_url($cas_server);
-	error_log("url componenets :".print_r($componentsOfUrl,true));
+	//error_log("url componenets :".print_r($componentsOfUrl,true));
 	$host = "";
 	$port = "";
 	$path = "";
@@ -340,7 +403,6 @@ $ldapPassword = $ldapPassword ? $ldapPassword : ""; // if the  decrypt function 
 			'ldapport' => $ldap_port,// $get_options_func('wpcasldap_ldapport'),
 			'useldap' => $get_options_func('wpcasldap_useldap'),
 			'ldapbasedn' => $get_options_func('wpcasldap_ldapbasedn'),
-
 			'ldapuser' => $get_options_func('wpcasldap_ldapuser'),
 			'ldappassword' => $ldapPassword,			
 			'casorldap_attribute' => $get_options_func('wpcasldap_casorldap_attribute'),
@@ -375,11 +437,11 @@ function parse_cas_url(&$cas_server_url)
   {
     if(empty($components['host']) && !empty($components['path']))
     {
-      error_log("path :".$components['path']);
+      //error_log("path :".$components['path']);
       $cas_server_url = SCHEME.$cas_server_url;
-      error_log("cas url :".$cas_server_url);
+      //error_log("cas url :".$cas_server_url);
       $components =  parse_url($cas_server_url);
-      error_log("componenets after editing url :".print_r($components,true));
+      //error_log("componenets after editing url :".print_r($components,true));
     }
   }
   return $components;
