@@ -30,21 +30,33 @@ class roleAssignmentRules
 	public function addNupdateRule($name,$post)
 	{
 		//$roleRuleOb = new roleAssignmentRules();
-		$this->init();
-		$allRules = $this->getAllRules();
-		$funcUsed = $this->update_function;
-		if($allRules)
+		if(isset($name) && isset($post) && !empty($name) && !empty($post))
 		{
-			$allRules[$name] = $post;
-			error_log("name :".$name);
-			error_log("post :".$post);
-			return $funcUsed(roleAssignmentRules::RULE_ROLES_KEY,$allRules);
-		}
-		else
-		{
-			$newRule = array();
-			$newRule[$name] = $post;
-			return $funcUsed(roleAssignmentRules::RULE_ROLES_KEY,$newRule);
+			$this->init();
+			$allRules = $this->getAllRules();
+			$funcUsed = $this->update_function;
+			$rulesCount = 0;
+			$post['rid'] = 1;
+			if($allRules)
+			{
+				$rulesCount = count($allRules);
+				if(array_key_exists ($name, $allRules))
+					$rid = $allRules[$name]["rid"];
+				else
+					$rid = $rulesCount + 1;
+
+				$post['rid'] = $rid;	
+				$allRules[$name] = $post;
+				error_log("name :".$name);
+				error_log("post :".$post);
+				return $funcUsed(roleAssignmentRules::RULE_ROLES_KEY,$allRules);
+			}
+			else
+			{
+				$newRule = array();
+				$newRule[$name] = $post;
+				return $funcUsed(roleAssignmentRules::RULE_ROLES_KEY,$newRule);
+			}
 		}
 		return false;
 	}
@@ -91,10 +103,11 @@ class roleAssignmentRules
 
 
 		error_log("Check name rule -------------------". __('Name of Rule','wpcasldap'));
-		$ruleHtml = "";
+		$ruleHtml = "<div>"; // This is div is used to get the elements in javacript. Do not remove this.
 		
 		$ruleHtml .= '<div>';
 		$ruleHtml .=  '<label>'. __('Name of Rule','wpcasldap') .'</label>';
+		$rulename_id = "rulename";
 
 		$ruleHtml .=  '<input type="text" size="50" name="wpcasldap_rulename" id="rulename_inp" value="'.$rule.'" >';
 		$ruleHtml .= '</div>';
@@ -115,10 +128,19 @@ class roleAssignmentRules
 		$ruleHtml .= '</select>';
 		$ruleHtml .= '</div>';
 
+		$ruleHtml .= '<div id="query_div" style="display:none;">';
+		$ruleHtml .= '<label>'.__('LDAP Query','wpcasldap').'</label>';
+		$ruleHtml .= '<input type="text" name="wpcasldap_ldap_query" id="ldap_query" >';
+		$ruleHtml .= '</div>';
+
+
+
+
+
 		$ruleHtml .= '<div>';
 		$ruleHtml .= '<label>'.__('Attribute Name','wpcasldap').'</label>';
 		$att_name = isset($ruleAttributes["attributeName"]) ? $ruleAttributes["attributeName"] : "";
-		$ruleHtml .= '<input type="text" size="50" name="wpcasldap_attribute_name" id="attribute_name_inp" value='.$att_name.'>';
+		$ruleHtml .= '<input type="text" size="50" name="wpcasldap_attribute_name" id="attribute_name_inp" value="'.$att_name.'" >';
 		$ruleHtml .= '</div>';
 
 		$ruleHtml .= '<div>';
@@ -140,7 +162,7 @@ class roleAssignmentRules
 		$ruleHtml .= '<div>';
 		$ruleHtml .= '<label>'.__('Compared Value','wpcasldap').'</label>';
 		$compared_value = isset($ruleAttributes["comparedValue"]) ? $ruleAttributes["comparedValue"] : "";
-		$ruleHtml .= '<input type="text" size="50" name="wpcasldap_compared_value" id="compared_value_inp" value='.$compared_value.'>';
+		$ruleHtml .= '<input type="text" size="50" name="wpcasldap_compared_value" id="compared_value_inp" value="'.$compared_value.'" >';
 		$ruleHtml .= '</div>';
 
 		$ruleHtml .= '<div>';
@@ -159,29 +181,31 @@ class roleAssignmentRules
 		$ruleHtml .= '</select>';
 		$ruleHtml .= '</div>';
 
-		$ruleHtml .= '<div>';
-		$ruleHtml .= '<label>'.__('WP Site','wpcasldap').'</label>';
-		$ruleHtml .= '<select name="wpcasldap_wp_site" id="wp_site_inp">';
-		$wp_site = isset($ruleAttributes["wpSite"]) ? $ruleAttributes["wpSite"] : "";
-		if( $wp_site == "select all")
-			$ruleHtml .= '<option value="select all" selected>select all</option>';
-		else
-			$ruleHtml .= '<option value="select all">select all</option>';
-		//Get the site list from the database
-		$blog_list = get_blog_list( 0, 'all' );
-		krsort($blog_list);
-		$wp_site = isset($ruleAttributes["wpSite"]) ? $ruleAttributes["wpSite"] : "";
-		foreach ($blog_list AS $blog):
-			$selected = "";
-			if( $wp_site == $blog['path'])
-				$selected = "selected";
-			$ruleHtml .= '<option value="'.$blog['path'].'"  '. $selected .' >'.$blog['path'].'</option>';
-		endforeach;	
-		$ruleHtml .= '</select>';
-		$ruleHtml .= '</div>';
+		$wp_sites = $ruleAttributes["wpSite"];
+
 
 		$ruleHtml .= '<div>';
-		$ruleHtml .= '<input type="button" name="wpcasldap_create_rule" id="create_rule_inp" class="button-primary" value="Save Settings" >';
+		$ruleHtml .= '<label>'.__('WP Site','wpcasldap').'</label><br/>';
+		$blog_list = get_blog_list( 0, 'all' );
+		krsort($blog_list);
+		foreach ($blog_list AS $blog):
+			$checked = "";
+			if(is_array($wp_sites) && in_array($blog["path"],$wp_sites))
+			{
+				$checked = "checked";
+			}
+			$ruleHtml .= '<input type="checkbox" name="wpcasldap_wp_site" value="'. $blog["path"] .'" '.$checked.' /> <label>'. $blog["path"].'</label><br/>';
+		endforeach;	
+
+		$ruleHtml .= '</div>';
+		
+		if( isset($ruleAttributes["rid"]) && $ruleAttributes["rid"] > 0)
+		{
+			$ruleHtml .= '<input type="hidden" name="rid" value="'.$ruleAttributes["rid"].'">';
+		}
+		$ruleHtml .= '<div>';
+		$ruleHtml .= '<input type="button" class="button-primary" value="Save Settings" >';
+		$ruleHtml .= '</div>';
 		$ruleHtml .= '</div>';
 
 

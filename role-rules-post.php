@@ -13,6 +13,7 @@ if(isset($_POST))
 	{
 		$ruleName = $_POST['ruleName'];
 		$source = isset($_POST["source"]) ? $_POST["source"] : "";
+		$query = isset($_POST["query"]) ? $_POST["query"] : "";
 	    $attributeName = isset($_POST["attributeName"]) ? $_POST["attributeName"] : "";
 	    $operator = isset($_POST["operator"]) ? $_POST["operator"] : "";
 	    $comparedValue = isset($_POST["comparedValue"]) ? $_POST["comparedValue"] : "";
@@ -23,8 +24,8 @@ if(isset($_POST))
 		switch($_POST["option"])
 		{
 			case "addNupdate":
-				$post = array("source" => $source, "attributeName" => $attributeName, "operator" => $operator, "comparedValue" => $comparedValue, "wpRole" => $wpRole);
-				$post[] = array("wpSite" => $wpSite);
+				$post = array("source" => $source, "attributeName" => $attributeName, "operator" => $operator, "comparedValue" => $comparedValue, "wpRole" => $wpRole, "query" => $query, "wpSite" => $wpSite);
+				
 				error_log("POst++++++++++++ :".print_r($post,true));
 				$returnVal = $roleInstance->addNupdateRule($ruleName, $post);
 				break;

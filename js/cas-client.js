@@ -8,15 +8,25 @@ function showPasswordField()
 }
 
 jQuery(document).ready(function($) {
-  jQuery(".button-primary").click(function() {  
+	jQuery(".button-primary").live('click', function(){
+  //jQuery(".button-primary").click(function() {  
     // validate and process form here  
+    //alert("hello");
     var ruleName = jQuery("input#rulename_inp").val();
     var source = jQuery("#source_inp option:selected").text();
     var attributeName = jQuery("input#attribute_name_inp").val();
     var operator = jQuery("#operator_inp option:selected").text();
     var comparedValue = jQuery("input#compared_value_inp").val();
     var wpRole = jQuery("#wp_role_inp option:selected").text();
-    var wpSite = jQuery("#wp_site_inp option:selected").text();
+    var wpSite = new Array();
+   // console.log("element :"+jQuery('input[name="wpcasldap_wp_site"]:checked');
+    //console.log(jQuery('input[name="wpcasldap_wp_site"]:checked').serialize());
+    jQuery('input[name="wpcasldap_wp_site"]:checked').each(function() {
+	   console.log(this.value);
+	   wpSite.push(this.value);
+	});
+	console.log("wp site :"+wpSite);
+   
     var ajax_url = jQuery("#ajax_url").val();
     var data = {
 		action: 'my_action',
@@ -60,7 +70,14 @@ jQuery(document).ready(function($) {
 			html_el += "operator - "+ruleArray["operator"]+"<br/>";
 			html_el += "Compared Value - "+ruleArray["comparedValue"]+"<br/>";
 			html_el += "WP Role - "+ruleArray["wpRole"]+"<br/>";
-
+			html_el += "WP Site - <br/>";
+			if(ruleArray["wpSite"] != undefined)
+			{
+				for(var i=0;i<ruleArray["wpSite"].length;i++)
+				{
+					html_el += ruleArray["wpSite"][i] +"<br/>";
+				} 
+			}
 
 			var divId = ruleName.replace(' ',"_");
 			//console.log("div Id :"+divId);
@@ -69,6 +86,22 @@ jQuery(document).ready(function($) {
 		}
 	});
   });
+
+ jQuery("#source_inp").change(function(){
+ 	var optionSelected = jQuery("option:selected", this);
+ 	var valueSelected = this.value;
+ 	console.log("value selected :"+ valueSelected);
+ 	if(valueSelected == "LDAP")
+ 		jQuery("#query_div").css("display","");
+ 	else
+ 	{
+ 		jQuery("#query_div").css("display","none");
+ 		jQuery("#ldap_query").val("");
+ 	}
+ });
+
+
+
 
 
 
@@ -80,7 +113,7 @@ jQuery(document).ready(function($) {
   		var ajax_url = jQuery("#ajax_url").val();
 	  	var data = {
 			action: 'my_action',
-			option: 'edit',
+			option: 'view',
 			ruleName: ruleName		
 		}
 
@@ -90,9 +123,26 @@ jQuery(document).ready(function($) {
 		{
 			console.log("response :"+response);
 			var parsedJson = JSON.parse(response);
-			var allHtml = parsedJson.returnValue;
-  			var divId = ruleName.replace(' ',"_");
-  			jQuery("#"+divId).html(allHtml);
+			var returnValue = parsedJson.returnValue;
+  			jQuery("#rulename_inp").val(ruleName);
+  			console.log("source :"+returnValue["source"]);
+  			jQuery("#source_inp").val(returnValue["source"]);
+  			jQuery("#source_inp").trigger("change");
+  			if(returnValue=="LDAP")
+  			{
+  				jQuery("#ldap_query").val(returnValue["query"]);
+  			}
+
+  			jQuery("#attribute_name_inp").val(returnValue["attributeName"]);
+  			jQuery("#operator_inp").val(returnValue["operator"]);
+  			jQuery("#compared_value_inp").val(returnValue["comparedValue"]);
+  			jQuery("#wp_role_inp").val(returnValue["wpRole"]);
+  			var wpSites = returnValue["wpSite"];
+  			console.log("wpsites :"+wpSites);
+  			 jQuery('input[name="wpcasldap_wp_site"]').each(function() {
+  			 	if(jQuery.inArray(this.value,wpSites) > -1)
+  			 			jQuery(this).attr('checked','checked');
+  			 });
   		}
 	});
   });
