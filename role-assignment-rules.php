@@ -1,5 +1,7 @@
 <?php
 include_once(dirname(__FILE__)."/utilities.php");
+include_once(dirname(__FILE__)."/ldapManager.php");
+include_once(dirname(__FILE__)."/cas-password-encryption.php");
 class roleAssignmentRules
 {
 	/*
@@ -90,6 +92,111 @@ class roleAssignmentRules
 		
 		return false;
 	}
+
+    public function applyRules($username)
+    {
+        error_log("###############START OF RULE ROLES ###################");
+        error_log("username :".$username);
+        $role = "";
+        $allRules = $this->getAllRules();
+        foreach($allRules as $key => $value)
+        {
+            $evaluateResult = $this->evaluateRule($allRules[$key],$username);
+            error_log("\n  search results from rule :".print_r($evaluateResult,true));
+            if(is_array($evaluateResult) && $evaluateResult["status"] == "true")
+            {
+               if(isset($evaluateResult["role"]) && !empty($evaluateResult["role"]))
+                {
+                    $role = $evaluateResult["role"];
+                    break;
+                }
+            }
+
+
+        }
+        error_log("############### END OF RULE ROLES ###################");
+        return $role;
+    }
+
+    public function evaluateRule($rule,$username)
+    {
+        if(isset($rule) && !empty($rule))
+        {
+            //get all the information of a rule
+            $source = $rule["source"];
+            $query = $rule["query"];
+            $query = str_replace("%u",$username,$query);
+
+            $attributeName = $rule["attributeName"];
+            $operator = $rule["operator"];
+            $comparedValue = $rule["comparedValue"];
+            $comparedValue = str_replace("%u",$username,$comparedValue);
+            $wpRole = $rule["wpRole"];
+            $funcUsed = $this->get_function;
+            $ldapBaseDn = $funcUsed("wpcasldap_ldapbasedn");
+            $ldapUsername = $funcUsed("wpcasldap_ldapuser");
+            $ldapPassword = $funcUsed("wpcasldap_ldappassword");
+            $ldapUri = $funcUsed("wpcasldap_ldapuri");
+            global $ciphers;
+            if(!empty($ldapPassword))
+                $ldapPassword = wpcasclient_decrypt($ldapPassword,$ciphers);
+            if(empty($ldapUsername) || empty($ldapPassword) || empty($ldapBaseDn))
+            {
+                debug_log("Ldap Username, Ldap Password or Ldap BaseDN not configured properly");
+                return null;
+            }
+
+            $ldapMOb = new ldapManager($ldapUsername, $ldapPassword,null,$ldapUri);
+            //currently attributeName is not an array, so we need to make it because ldap_search accepts attribute as an array
+
+            $attributes = array($attributeName);
+            //error_log("search input value : basedn - ".$ldapBaseDn. "   query- ".$query."  attributes: ".print_r($attributes,true));
+            $searchResults = $ldapMOb->executeLdapQuery($ldapBaseDn,$query,$attributes);
+            error_log("search results :".print_r($searchResults,true));
+            $output = array();
+            if(isset($searchResults) && is_array($searchResults))
+            {
+                for($i=0;$i<count($searchResults)-1;$i++)
+                {
+                    $attributeName = strtolower($attributeName);
+                    error_log("first element:".print_r($searchResults[$i][$attributeName],true));
+                    $output[] = $searchResults[$i][$attributeName][0];
+                }
+
+            }
+            if(isset($output) && is_array($output))
+            {
+
+                // TODO: Currently just doing in_array comparison
+                // TODO: This needs to be updated to use the operator which the user provided
+
+
+                if(in_array($comparedValue,$output))
+                {
+                    //Rule passed
+                    return array("status"=> "true" , "role" => $wpRole);
+
+                }
+            }
+            return array("status"=> "false" , "role" => $wpRole);
+
+
+        }
+
+
+        return null;
+    }
+
+
+
+
+    public function operatorInterpretation($operator)
+    {
+
+        return null;
+    }
+
+
 
 
 

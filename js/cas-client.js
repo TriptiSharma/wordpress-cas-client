@@ -19,6 +19,7 @@ jQuery(document).ready(function($) {
     var comparedValue = jQuery("input#compared_value_inp").val();
     var wpRole = jQuery("#wp_role_inp option:selected").text();
     var wpSite = new Array();
+    var query = jQuery("input#ldap_query").val();
    // console.log("element :"+jQuery('input[name="wpcasldap_wp_site"]:checked');
     //console.log(jQuery('input[name="wpcasldap_wp_site"]:checked').serialize());
     jQuery('input[name="wpcasldap_wp_site"]:checked').each(function() {
@@ -37,7 +38,8 @@ jQuery(document).ready(function($) {
 	    operator: operator,
 	    comparedValue: comparedValue,
 	    wpRole: wpRole,
-	    wpSite: wpSite
+	    wpSite: wpSite,
+        query: query
 	}
 
 
@@ -128,7 +130,7 @@ jQuery(document).ready(function($) {
   			console.log("source :"+returnValue["source"]);
   			jQuery("#source_inp").val(returnValue["source"]);
   			jQuery("#source_inp").trigger("change");
-  			if(returnValue=="LDAP")
+  			if(returnValue["source"]=="LDAP")
   			{
   				jQuery("#ldap_query").val(returnValue["query"]);
   			}

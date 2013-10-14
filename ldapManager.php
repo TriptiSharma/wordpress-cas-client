@@ -226,7 +226,7 @@ class ldapManager
    *
    * @return null|resource
    */
-  public function Search($base_dn, $query)
+  public function Search($base_dn, $query, $attributes = null)
   {
     if(!isset($base_dn) || !isset($query))
     {
@@ -240,9 +240,27 @@ class ldapManager
       return null;
     }
 
-    // extract an array of just the attribute values we'll need from LDAP
-    $attributes = array_map(create_function('$v', 'return $v->attribute;'), array_values($this->ProfileMappings));
-    debug_log("(ldapManager->Search()) Attributes to retrieve from LDAP ".array_info($attributes));
+      //bind
+      /*
+      $bind = $this->Bind($this->Username, $this->password);
+
+      error_log("bind value :".$bind);
+      //$bind = @ldap_bind($ds);
+      //Check to make sure we're bound.
+      if (!$bind) {
+          $error = 'Binding to LDAP failed.';
+          echo "\nERROR: " . $error;
+          error_log($error);
+          debug_log("(ldapManager->GetUser()) ".$error);
+          return null;
+          //exit();
+      } */
+    if(!isset($attributes))
+    {
+        // extract an array of just the attribute values we'll need from LDAP
+        $attributes = array_map(create_function('$v', 'return $v->attribute;'), array_values($this->ProfileMappings));
+        debug_log("(ldapManager->Search()) Attributes to retrieve from LDAP ".array_info($attributes));
+    }
 
     // TODO: do we need additional attributes for internal logic? (see the constructor)
     // e.g. 'EmployeeID', 'rolename'?
@@ -252,7 +270,7 @@ class ldapManager
   }
 
   /**
-   * Parses restules returned from a call to Search()
+   * Parses results returned from a call to Search()
    *
    * @param $search_results
    *
@@ -543,4 +561,73 @@ class ldapManager
     }
     return false;
   }
+
+
+    function executeLdapQuery($baseDN,$query,$attributes)
+    {
+        try
+        {
+            $ds = $this->Connect();
+            if (!$ds) {
+                $error = 'Error in contacting the LDAP server.';
+                error_log("\n" . $error);
+                debug_log("(ldapManager->GetUser()) ".$error);
+            } else {
+                //error_log("\n".$filter);
+                /*
+                $ldap_dn = $wpcasldap_use_options['ldapbasedn'];
+                */
+                //echo "<h2>Connected</h2>";
+
+                // Make sure the protocol is set to version 3
+                if (!$this->SetOption(ldapManager::OPT_PROTOCOL_VERSION, 3)) {
+                    $error = 'Failed to set protocol version to 3.';
+                    error_log("\n" . $error);
+                    debug_log("(ldapManager->GetUser()) ".$error);
+                } else {
+                    debug_log("(ldapManager->GetUser()) username: '" . $this->Username . "', Password: '".  $this->password . "'");
+                    if(empty($this->Username) || empty($this->password))
+                    {
+                        echo "ERROR: LDAP Username or LDAP Password not configured correctly";
+                        exit();
+                    }
+
+                    $bind = $this->Bind($this->Username, $this->password);
+                    //$bind = @ldap_bind($ds);
+                    //Check to make sure we're bound.
+                    if (!$bind) {
+                        $error = 'Binding to LDAP failed.';
+                        echo "\nERROR: " . $error;
+                        error_log($error);
+                        debug_log("(ldapManager->GetUser()) ".$error);
+                        //exit();
+                    } else {
+                        //$query = str_replace("{id}", $uid, $this->Query);
+
+                        //debug_log("(ldapManager->GetUser()) Searching for user ID '$uid' (LDAP query: '$query')");
+                        $search = $this->Search($baseDN, $query,$attributes);
+                        if (isset($search) && !empty($search))
+                        {
+                            $info = $this->GetSearchResults($search);
+
+                            $this->Close();
+                            // TODO: Is this code assuming that $info only contains one record?
+                            return $info;
+                        }
+                        debug_log("(ldapManager->GetUser()) User not found!");
+                    }
+                    $this->Close();
+                }
+            }
+        }
+        catch (Exception $e)
+        {
+            $err_msg = "An LDAP error occurred while talking to '" . $this->Uri . "': " . $e->getMessage();
+            error_log($err_msg);
+            debug_log("(ldapManager->GetUser()) ".$err_msg);
+        }
+        return false;
+    }
+
+
 }

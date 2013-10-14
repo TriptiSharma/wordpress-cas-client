@@ -99,7 +99,7 @@ if($wpcasldap_options)
 }
 
 $wpcasldap_use_options = wpcasldap_getoptions();
-debug_log("(wordpress-cas-client) options: ".print_r($wpcasldap_use_options,true));
+//debug_log("(wordpress-cas-client) options: ".print_r($wpcasldap_use_options,true));
 
 
 global $casManager;

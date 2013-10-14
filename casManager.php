@@ -7,6 +7,7 @@
  * To change this template use File | Settings | File Templates.
  */
 include_once(dirname(__FILE__)."/utilities.php");
+include_once(dirname(__FILE__)."/role-assignment-rules.php");
 spl_autoload_register('class_autoloader');
 
 
@@ -162,9 +163,16 @@ class casManager
     if (!function_exists('wp_insert_user'))
       include_once ( ABSPATH . WPINC . '/registration.php');
 
-
     if($userdata)
     {
+        //Check the Role Rules to find out what role a new user should have
+        $roleRules = new roleAssignmentRules();
+        $user_role = $roleRules->applyRules($newuserid);//userid is actually username
+        if(isset($user_role) && !empty($user_role))
+            $userdata["role"] = $user_role;
+
+
+
       $user_id = wp_insert_user( $userdata );
       if ( is_wp_error( $user_id ) ) {
         //error_log("inserting a user in wp failed");
